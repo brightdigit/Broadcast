@@ -15,9 +15,32 @@ import PackageDescription
 // `MultiSessionLogger` (guarded by `#if canImport(Boutique)`) compiles to nothing on watchOS
 // and non-Apple platforms. `ConsoleLogger` is likewise gated on `#if canImport(OSLog)`.
 //
+// Windows carve-out: `.when(platforms:)` gates *linking*, not *resolution* — SwiftPM still
+// checks out Boutique/Bodega everywhere. Bodega commits generated DocC docs whose filenames
+// contain characters illegal on Windows/NTFS (e.g. `(_:_:).json`), so `git checkout` fails
+// during dependency resolution on Windows. The manifest is compiled per-host, so we drop the
+// Boutique *package* declaration entirely under `#if os(Windows)`; `MultiSessionLogger` is
+// already `#if canImport(Boutique)`-guarded, so no source needs to change.
+//
 // `swiftLanguageModes: [.v5]` keeps Swift 5 language mode so existing `static var` globals do
 // not become hard concurrency errors under Swift 6 mode. watchOS/tvOS/visionOS floors match
 // `Synchronization.Mutex`.
+#if os(Windows)
+let boutiquePackageDependencies: [Package.Dependency] = []
+let boutiqueTargetDependencies: [Target.Dependency] = []
+#else
+let boutiquePackageDependencies: [Package.Dependency] = [
+	.package(url: "https://github.com/mergesort/Boutique", from: Version(3, 0, 2))
+]
+let boutiqueTargetDependencies: [Target.Dependency] = [
+	.product(
+		name: "Boutique",
+		package: "Boutique",
+		condition: .when(platforms: [.iOS, .macOS, .tvOS, .visionOS])
+	)
+]
+#endif
+
 let package = Package(
 	name: "Broadcast",
 	platforms: [
@@ -33,31 +56,17 @@ let package = Package(
 			targets: ["Broadcast"]
 		)
 	],
-	dependencies: [
-		.package(url: "https://github.com/mergesort/Boutique", from: Version(3, 0, 2)),
+	dependencies: boutiquePackageDependencies + [
 		.package(url: "https://github.com/apple/swift-docc-plugin", from: Version(1, 0, 0))
 	],
 	targets: [
 		.target(
 			name: "Broadcast",
-			dependencies: [
-				.product(
-					name: "Boutique",
-					package: "Boutique",
-					condition: .when(platforms: [.iOS, .macOS, .tvOS, .visionOS])
-				)
-			]
+			dependencies: boutiqueTargetDependencies
 		),
 		.testTarget(
 			name: "BroadcastTests",
-			dependencies: [
-				"Broadcast",
-				.product(
-					name: "Boutique",
-					package: "Boutique",
-					condition: .when(platforms: [.iOS, .macOS, .tvOS, .visionOS])
-				)
-			]
+			dependencies: ["Broadcast"] + boutiqueTargetDependencies
 		)
 	],
 	swiftLanguageModes: [.v5]
