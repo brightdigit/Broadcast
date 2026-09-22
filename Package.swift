@@ -3,8 +3,8 @@
 
 import PackageDescription
 
-// AtLeast integration branch: combines non-Apple build support (#10) with watchOS support (#9)
-// using a single platform-conditional strategy.
+// Platform support: watchOS via MultiSessionLogging (#9) and non-Apple builds (#10), with a
+// single platform-conditional strategy for Boutique.
 //
 // Broadcast requires Swift 6.0+: it uses `Synchronization.Mutex` and, on non-Apple platforms,
 // `Foundation.FormatStyle` — both of which only exist in the Swift 6.0 toolchain on Linux.
